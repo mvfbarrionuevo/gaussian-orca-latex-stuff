@@ -1,0 +1,81 @@
+\documentclass[12pt,a4paper]{article}
+
+%------------------------------------------------------
+%	Normal document packages
+%------------------------------------------------------
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage[brazil]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{fancyhdr}
+\usepackage{microtype}
+\usepackage{cancel}
+\usepackage{enumitem}
+\usepackage{mathtools}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{ragged2e}
+\usepackage{gensymb}
+\usepackage{lscape}
+\usepackage{rotating}
+\usepackage{tikz}
+\usepackage{geometry}
+\usepackage[LGRgreek]{mathastext}
+\usepackage[labelformat=empty]{caption}
+
+%------------------------------------------------------
+%	Document packages to compile graphs
+%------------------------------------------------------
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.10} % you can change 'width' to fit your graph according to your document
+\usepgfplotslibrary{external}	% this helps to get things done in a short time
+\tikzexternalize			% it helps the above .spy (lib)
+%------------------------------------------------------
+
+\begin{document}
+%\oddsidemargin=-27pt
+\thispagestyle{empty}
+\begin{figure}
+\vspace{-2cm}
+\centering
+\begin{turn}{90}
+\begin{tikzpicture}
+\begin{axis}[
+    width=25cm, height=15cm,
+    enlargelimits=false,
+    x tick label style={rotate=60},
+    title={<Name your plot>},
+    xlabel={Atom label},
+    ylabel={Fukui indice [$E_h$]},
+    xlabel shift = 1 pt,
+    xtick=data,
+    %xmin=-1, xmax=42,
+    ymin=-0.010, ymax=0.035,
+    xticklabels={<your atom labels, example: Zn0, C1, C2, H4 ... >},
+    ytick={<your y ticks>  
+},
+    y tick label style={
+        /pgf/number format/.cd,
+            fixed,
+            fixed zerofill,
+            precision=2,
+        /tikz/.cd
+    },
+    legend style = {at={(1.01,1)},
+	anchor = north west,
+	fill=white,
+	align=left},
+    ymajorgrids=true,
+    xmajorgrids=true,
+    grid style=dashed,
+]
+
+ 
+\addplot+[sharp plot] coordinates {<your coordinates here, example: (0,0.15)(1,0.00)(2,0.03)(4,0.35) ... >}; \addlegendentry{<your legend here>}
+
+\end{axis}
+\end{tikzpicture}
+\end{turn}
+\end{figure}
+
+\end{document}
