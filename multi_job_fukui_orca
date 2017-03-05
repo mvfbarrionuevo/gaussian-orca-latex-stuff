@@ -1,0 +1,48 @@
+! pal8 SlowConv PBE def2-TZVP def2-TZVP/J ECP(def2-TZVP, def2-SVP/J) ZORA NRSCF TightSCF PModel UseSym xyzfile KeepDens
+! PrintBasis 6-31G*
+%scf
+    MaxIter 1500
+end
+%base "natural"
+%output
+        print[P_Hirshfeld] 1
+        Print[ P_Basis ] 2
+        Print[ P_MOS ] 1
+end
+* xyz Q S  
+ <change Q and S by charge and mutiplicity and delete this line>
+ <your coordinates here and delete this line>
+*
+
+$new_job
+! pal8 SlowConv PBE def2-TZVP def2-TZVP/J ECP(def2-TZVP, def2-SVP/J) ZORA NRSCF TightSCF PModel UseSym NoAutostart KeepDens
+! PrintBasis 6-31G*
+%moinp "natural.gbw"
+%scf
+    MaxIter 1500
+end
+% base "npluse"
+%output
+        print[P_Hirshfeld] 1
+        Print[ P_Basis ] 2
+        Print[ P_MOS ] 1
+end
+*xyzfile Q S natural.xyz
+ <change Q and S by charge and multiplicity and delete this line>
+
+$new_job
+! pal8 SlowConv PBE def2-TZVP def2-TZVP/J ECP(def2-TZVP, def2-SVP/J) ZORA NRSCF TightSCF PModel UseSym NoAutostart KeepDens
+! PrintBasis 6-31G*
+%moinp "natural.gbw"
+%scf
+    MaxIter 1500
+end
+%base "nminuse"
+%output
+    print[P_Hirshfeld] 1
+    Print[ P_Basis ] 2
+    Print[ P_MOS ] 1
+end
+*xyzfile Q S natural.xyz
+ <change Q and S by charge and multiplicity and delete this line>
+
