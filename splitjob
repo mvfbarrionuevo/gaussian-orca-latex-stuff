@@ -1,0 +1,110 @@
+#!/bin/bash
+
+if [ -z $1 ]; then
+	echo " "
+	echo "There is no given multjob. Please, provide only the file name without extension."
+	echo " "
+	exit 0;
+fi
+
+###########################################################################################
+#                          DETERMINING NATURAL, CATION AND ANION                          #
+###########################################################################################
+
+for ((i = 1; i<=3; i++)); do
+   job[$i-1]=$(grep "*" $1.out | grep "xyz" | grep -o '\ [0-9]\ ' | awk -v a=$i -v b=1 'FNR==a {print $b}' | sed 's/\ //g')
+done
+
+min=$(grep "*" $1.out | grep "xyz" | grep -o '\ [0-9]\ ' | sed 's/\ //g' | sort -n | head -1)
+max=$(grep "*" $1.out | grep "xyz" | grep -o '\ [0-9]\ ' | sed 's/\ //g' | sort -n | tail -1)
+
+for ((i = 0; i<=2; i++)); do
+   if [ ${job[$i]} = $min ]; then
+        job_type[$i]="anion"
+   elif [ ${job[$i]} = $max ]; then
+        job_type[$i]="cation"
+   else
+        job_type[$i]="natural"
+   fi
+done
+
+###########################################################################################
+#                                 SPLITTING MULTJOB FILE                                  #
+###########################################################################################
+
+targets=($(grep -h "base" $1.out | grep -o '".*"' | sed 's/"//g'))
+
+for ((i = 0; i != 3; i++)); do
+   if [ $i = 2 ]; then	
+     echo " "
+     echo "Getting job $i as ${targets[i]}.out."
+     echo " "
+     sed -n -e '/JOB\ NUMBER\ \ 3/,/TOTAL\ RUN\ \TIME/ p' $1.out > ${targets[i]}.out
+   fi
+   echo " "
+   echo "Getting job $((i+1)) as ${targets[i]}.out."
+   echo " "
+   sed -n -e "/JOB\ NUMBER\ \ $((i+1))/,/JOB\ NUMBER\ \ $((i+2))/ p" $1.out > ${targets[i]}.out
+done
+
+###########################################################################################
+#                                 SPLITTING MULTJOB FILE                                  #
+###########################################################################################
+
+for ((i = 0; i != 3; i++)); do
+  echo " "
+  echo "Creating molden file as ${targets[i]}.molden."
+  echo " "
+  ~/Programs/orca_3_0_2_linux_x86-64/orca_2mkl ${targets[i]} -molden
+
+  echo " "
+  echo "Creating molden input as ${targets[i]}.molden.input."
+  echo " "
+  java -jar ~/Programs/janpa/molden2molden.jar -fromorca3bf -orca3signs -i ${targets[i]}.molden.input -o ${targets[i]}.molden
+
+  echo " "
+  echo "Creating janpa file as ${targets[i]}.janpa."
+  echo " "
+  java -jar ~/Programs/janpa/janpa.jar -i ${targets[i]}.molden -ignorefock > ${targets[i]}.janpa
+
+done
+
+###########################################################################################
+#                               CALCULATING FUKUI INDICES                                 #
+###########################################################################################
+
+rm -rf npa_$1.csv
+
+for ((i = 0; i<=2; i++)); do
+   sed -n '/Center/,/Angular/p' ${targets[i]}.janpa | sed '/Angular/d' | sed '/^$/d' | sed -e '1,2d' > ${job_type[i]}.txt
+done
+echo " "
+echo "Calculating values. Please waite, it will take a few minutes."
+echo -en "Natural Population Analysis (NPA) - Fukui Indices\n" >> npa_$1.csv
+echo " "
+echo -en "atom;fplus;fminus;fradi;atomID;(atomid,fplus);(atomid,fminus);(atomid,fradi) \n" >> npa_$1.csv
+for ((i=1; i<=$(cat ${job_type[1]}.txt | wc -l); i++)); do
+    atom=$(awk -v a=$i -v b=1 'FNR == a {print $b}' ${job_type[1]}.txt)
+    atomid=$(awk -v a=$i -v b=1 'FNR == a {print $b}' ${job_type[1]}.txt | sed 's/[A-Za-z]*//g')
+    for ((j = 0; j<=2; j++)); do
+      if [ ${job_type[$j]} = "anion" ]; then
+        q_ani=$(awk -v a=$i -v b=5 'FNR == a {print $b}' ${job_type[j]}.txt)
+      elif [ ${job_type[$j]} = "cation" ]; then
+        q_cat=$(awk -v a=$i -v b=5 'FNR == a {print $b}' ${job_type[j]}.txt)
+      else
+        q_nat=$(awk -v a=$i -v b=5 'FNR == a {print $b}' ${job_type[j]}.txt)
+      fi
+    done
+    q_fplus=$(python -c "print $q_cat-$q_nat")
+    q_fmins=$(python -c "print $q_nat-$q_ani")
+    q_fradi=$(python -c "print ($q_cat-$q_ani)/2")
+    echo -en "$atom;$q_fplus;$q_fmins;$q_fradi;$atomid;($atomid,$q_fplus);($atomid,$q_fmins);($atomid,$q_fradi) \n" >> npa_$1.csv
+done
+
+for ((i = 0; i<=2; i++)); do
+   rm -rf ${job_type[i]}.txt
+done
+
+echo " "
+echo "That's all folks. Have a nice NBO analysis."
+echo " "

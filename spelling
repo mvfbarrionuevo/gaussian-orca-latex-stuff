@@ -1,0 +1,18 @@
+ #!/bin/bash         
+
+file="$1"
+leng="$2"
+
+if [[ "$leng" == "pt_BR" ]]; then
+aspell --lang=$leng --master=$leng --mode=tex -c $file.tex
+elif [[ "$leng" == "en_CA" ]]; then
+aspell --lang=$leng --master=$leng-w_accents --mode=tex -c $file.tex
+else	echo " "
+echo "Sorry, I can't work with the arguments you gave me. Please, try to type these command examples:"
+echo " "
+echo "spelling <file>.tex pt_BR"
+echo " "
+echo "spelling <file>.tex en_CA"
+echo " "
+echo "Hope you got it. I'll be happy to assist you :)"
+fi

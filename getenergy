@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Check if the output file was passed as the first argument:
+if [ -z $1 ]; then
+	echo "#####################################################"
+	echo "# This script was made by Manoel Barrionuevo - 2017 #"
+	echo "#---------------------------------------------------#"
+	echo "# In order to get the energy value of your optmized #"
+	echo "#structure, type the following:                     #"
+	echo "#             getenergy <filename.log>              #"
+	echo "# where <filename.log> is your gaussian output.     #"
+	echo "#####################################################"
+	exit 0
+fi
+
+energy=$(grep -Po '(?<=HF\=).*(?=\\)' $1 | grep -o '\-\+[0-9]\+\.[0-9]\+')
+echo "$energy au"

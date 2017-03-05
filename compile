@@ -1,0 +1,65 @@
+ #!/bin/bash         
+file="$1"
+
+if [[ "$file" == "" ]]; then
+echo "-------------------------------------------------------------------------------------"
+echo "|      Sorry, something went wrong. Please, try to type this command example:       |"
+echo "|					compile <filename>			    |"
+echo "|	      Hope you got it. I'll be happy to compile your tex file :)	    |"
+echo "-------------------------------------------------------------------------------------"
+exit
+else
+echo "-------------------------------------------------------------------------------------"
+echo "|    Nice, everything is fine, just have fun watching the compilation process :)    |"
+echo "-------------------------------------------------------------------------------------"
+fi
+
+latex $file.tex
+
+echo "---------------------------------------------------"
+echo "|    Your file has been compiled successfully     |"
+echo "---------------------------------------------------"
+
+bibtex $file
+
+echo "---------------------------------------------------"
+echo "|                 Bibtex done                     |"
+echo "---------------------------------------------------"
+
+latex $file
+
+echo "---------------------------------------------------"
+echo "|   Your file has been recompiled successfully    |"
+echo "---------------------------------------------------"
+
+makeindex $file
+
+echo "---------------------------------------------------"
+echo "|                   Index done                    |"
+echo "---------------------------------------------------"
+
+
+latex $file
+
+echo "---------------------------------------------------"
+echo "|   Your file has been recompiled successfully    |"
+echo "---------------------------------------------------"
+
+pdflatex $file
+
+echo "---------------------------------------------------"
+echo "|   Your file has been recompiled successfully    |"
+echo "---------------------------------------------------"
+
+
+echo "---------------------------------------------------"
+echo "|                 Dumping files                   |"
+echo "---------------------------------------------------"
+
+rm -rf *.lof *.lot *.bcf *.xml *.toc *.log *.auxlock *.aux *.out *.dvi *.bbl *.blg *.nav *.snm *.out.ps *.idx *.ilg *.ind *~
+
+echo "---------------------------------------------------"
+echo "|               Dumped extra files                |"
+echo "|                     !DONE!                      |"
+echo "---------------------------------------------------"
+
