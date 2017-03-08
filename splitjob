@@ -34,17 +34,18 @@ done
 
 targets=($(grep -h "base" $1.out | grep -o '".*"' | sed 's/"//g'))
 
-for ((i = 0; i != 3; i++)); do
+for ((i = 0; i <= 2; i++)); do
    if [ $i = 2 ]; then	
      echo " "
-     echo "Getting job $i as ${targets[i]}.out."
+     echo "Getting job $((i+1)) as ${targets[i]}.out."
      echo " "
      sed -n -e '/JOB\ NUMBER\ \ 3/,/TOTAL\ RUN\ \TIME/ p' $1.out > ${targets[i]}.out
+   else
+     echo " "
+     echo "Getting job $((i+1)) as ${targets[i]}.out."
+     echo " "
+     sed -n -e "/JOB\ NUMBER\ \ $((i+1))/,/JOB\ NUMBER\ \ $((i+2))/ p" $1.out > ${targets[i]}.out
    fi
-   echo " "
-   echo "Getting job $((i+1)) as ${targets[i]}.out."
-   echo " "
-   sed -n -e "/JOB\ NUMBER\ \ $((i+1))/,/JOB\ NUMBER\ \ $((i+2))/ p" $1.out > ${targets[i]}.out
 done
 
 ###########################################################################################
