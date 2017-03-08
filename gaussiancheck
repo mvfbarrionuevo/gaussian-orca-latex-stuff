@@ -1,17 +1,19 @@
 #!/bin/bash
 
 # Check if the output file was passed as the first argument:
-if [ -z $1 ]; then
-	echo "No ouput file provided."
-	exit 0
+if [[ -z $@ ]]; then
+        echo "No ouput file provided."
+        exit 0
 fi
 
-echo "#################################################################################"
-echo "Job $1"
-echo "#################################################################################"
-egrep -h "$(grep -h 'Step number' $1 | wc -l) out of" $1 | tail -1
-egrep -h 'Converged' $1 | tail -1
-egrep -h 'YES| NO | exceeded' $1 | tail -4
-egrep -h 'SCF Don' $1 | tail -1
-echo "#################################################################################"
-
+for var in "$@"
+do
+  echo "#################################################################################"
+  echo "Job $var"
+  echo "#################################################################################"
+  egrep -h "$(grep -h 'Step number' $var | wc -l) out of" $var | tail -1
+  egrep -h 'Converged' $var | tail -1
+  egrep -h 'YES| NO | exceeded' $var | tail -4
+  egrep -h 'SCF Don' $var | tail -1
+  echo "#################################################################################"
+done
