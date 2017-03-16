@@ -83,9 +83,9 @@ echo " "
 echo "Calculating values. Please waite, it will take a few minutes."
 echo -en "Natural Population Analysis (NPA) - Fukui Indices\n" >> npa_$1.csv
 echo " "
-echo -en "atom;fplus;fminus;fradi;atomID;(atomid,fplus);(atomid,fminus);(atomid,fradi) \n" >> npa_$1.csv
+echo -en "atomid;atom;fplus;fminus;fradi;(atomid,fplus);(atomid,fminus);(atomid,fradi) \n" >> npa_$1.csv
 for ((i=1; i<=$(cat ${job_type[1]}.txt | wc -l); i++)); do
-    atom=$(awk -v a=$i -v b=1 'FNR == a {print $b}' ${job_type[1]}.txt)
+    atom=$(awk -v a=$i -v b=1 'FNR == a {print $b}' ${job_type[1]}.txt | sed 's/[0-9]*//g')
     atomid=$(awk -v a=$i -v b=1 'FNR == a {print $b}' ${job_type[1]}.txt | sed 's/[A-Za-z]*//g')
     for ((j = 0; j<=2; j++)); do
       if [ ${job_type[$j]} = "anion" ]; then
@@ -99,13 +99,16 @@ for ((i=1; i<=$(cat ${job_type[1]}.txt | wc -l); i++)); do
     q_fplus=$(python -c "print $q_cat-$q_nat")
     q_fmins=$(python -c "print $q_nat-$q_ani")
     q_fradi=$(python -c "print ($q_cat-$q_ani)/2")
-    echo -en "$atom;$q_fplus;$q_fmins;$q_fradi;$atomid;($atomid,$q_fplus);($atomid,$q_fmins);($atomid,$q_fradi) \n" >> npa_$1.csv
+    q_atmid=$(python -c "print $atomid-1")
+    echo -en "$q_atmid;$atom;$q_fplus;$q_fmins;$q_fradi;($q_atmid,$q_fplus);($q_atmid,$q_fmins);($q_atmid,$q_fradi) \n" >> npa_$1.csv
 done
 
 for ((i = 0; i<=2; i++)); do
    rm -rf ${job_type[i]}.txt
 done
 
+echo " "
+echo "A npa_$1.csv file has been created."
 echo " "
 echo "That's all folks. Have a nice NBO analysis."
 echo " "
