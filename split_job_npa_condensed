@@ -77,15 +77,25 @@ done
 
 for ((i = 0; i != 3; i++)); do
   echo -e "Creating molden file as ${targets[i]}.molden.\n"
-  ~/Programs/orca_3_0_2_linux_x86-64/orca_2mkl ${targets[i]} -molden
+  
+  #########################################################################################
+  # In order to make this script compatible to Orca4, you must change the orca path to the#
+  #newer one.										  #
+  #########################################################################################
+  $orcapath/orca_2mkl ${targets[i]} -molden
 
   echo -e "Creating molden input as ${targets[i]}.molden.input.\n"
 
-  java -jar ~/Programs/janpa/molden2molden.jar -fromorca3bf -orca3signs -i ${targets[i]}.molden.input -o ${targets[i]}.molden
+  #########################################################################################
+  # In order to run this script you must to define janpa path into your bashrc or modify  #
+  #the line 94 where it reads '$janpapath' to the actual path to janpa in your system.    #
+  #########################################################################################
+
+  java -jar $janpapath/molden2molden.jar -fromorca3bf -orca3signs -i ${targets[i]}.molden.input -o ${targets[i]}.molden
 
   echo -e "Creating janpa file as ${targets[i]}.janpa.\n"
 
-  java -jar ~/Programs/janpa/janpa.jar -i ${targets[i]}.molden -ignorefock > ${targets[i]}.janpa
+  java -jar $janpapath/janpa.jar -i ${targets[i]}.molden -ignorefock > ${targets[i]}.janpa
 
 done
 
@@ -100,7 +110,7 @@ for ((i = 0; i<=2; i++)); do
 done
 echo -e "Calculating values. Please waite, it will take a few minutes.\n"
 echo -en "Natural Population Analysis (NPA) - Fukui Indices\n" >> npa_$1.csv
-echo -en "atomid;atom;atomid+atom;fplus;fminus;fradi;(atomid,fplus);(atomid,fminus);(atomid,fradi) \n" >> npa_$1.csv
+echo -en "atomid;atom;atomid+atom;NPA_natural;NPA_cation;NPA_anion;fplus;fminus;fradi;(atomid,fplus);(atomid,fminus);(atomid,fradi) \n" >> npa_$1.csv
 
 max_q_fplus=0
 min_q_fplus=10
@@ -121,33 +131,26 @@ for ((i=1; i<=$(cat ${job_type[1]}.txt | wc -l); i++)); do
         q_nat=$(awk -v a=$i -v b=5 'FNR == a {print $b}' ${job_type[j]}.txt)
       fi
     done
+    echo -e "Calculating fukui index for atom $atomid$atom.\n"
     q_fplus=$(python -c "print (-$q_ani-(-$q_nat))")
-    if (( $(echo "$q_fplus > $max_q_fplus" |bc -l) )); then
-	max_q_fplus=$q_fplus
-    fi
-    if (( $(echo "$q_fplus < $min_q_fplus" |bc -l) )); then
-	min_q_fplus=$q_fplus
-    fi
+    max_q_fplus=$(python -c "print(max($q_fplus,$max_q_fplus))")
+    min_q_fplus=$(python -c "print(min($q_fplus,$min_q_fplus))")    
+    
     q_fmins=$(python -c "print (-$q_nat-(-$q_cat))")
-    if (( $(echo "$q_fmins > $max_q_fmins" |bc -l) )); then
-	max_q_fmins=$q_fmins
-    fi
-    if (( $(echo "$q_fmins < $min_q_fmins" |bc -l) )); then
-	min_q_fmins=$q_fmins
-    fi
+    max_q_fmins=$(python -c "print(max($q_fmins,$max_q_fmins))")
+    min_q_fmins=$(python -c "print(min($q_fmins,$min_q_fmins))")    
+    
     q_fradi=$(python -c "print ((-$q_ani-(-$q_cat)))/2")
-    if (( $(echo "$q_fradi > $max_q_fradi" |bc -l) )); then
-	max_q_fradi=$q_fradi
-    fi
-    if (( $(echo "$q_fradi < $min_q_fradi" |bc -l) )); then
-	min_q_fradi=$q_fradi
-    fi
+    max_q_fradi=$(python -c "print(max($q_fradi,$max_q_fradi))")
+    min_q_fradi=$(python -c "print(min($q_fradi,$min_q_fradi))")    
+    
     q_atmid=$(python -c "print $atomid-1")
-    echo -en "$q_atmid;$atom;$q_atmid$atom;$q_fplus;$q_fmins;$q_fradi;($q_atmid,$q_fplus);($q_atmid,$q_fmins);($q_atmid,$q_fradi) \n" >> npa_$1.csv
+    echo -en "$q_atmid;$atom;$q_atmid$atom;$q_nat;$q_cat;$q_ani;$q_fplus;$q_fmins;$q_fradi;($q_atmid,$q_fplus);($q_atmid,$q_fmins);($q_atmid,$q_fradi) \n" >> npa_$1.csv
 done
 
-    echo -en ";;max;$max_q_fplus;$max_q_fmins;$max_q_fradi \n" >> npa_$1.csv
-    echo -en ";;min;$min_q_fplus;$min_q_fmins;$min_q_fradi \n" >> npa_$1.csv
+    echo -en ";;;;;max;$max_q_fplus;$max_q_fmins;$max_q_fradi \n" >> npa_$1.csv
+    echo -en ";;;;;min;$min_q_fplus;$min_q_fmins;$min_q_fradi \n" >> npa_$1.csv
+
 for ((i = 0; i<=2; i++)); do
    rm -rf ${job_type[i]}.txt
 done
