@@ -77,15 +77,25 @@ done
 
 for ((i = 0; i != 3; i++)); do
   echo -e "Creating molden file as ${targets[i]}.molden.\n"
-  ~/Programs/orca_4_0_0_linux_x86-64/orca_2mkl ${targets[i]} -molden
+  
+  #########################################################################################
+  # In order to make this script compatible to Orca4, you must change the orca path to the#
+  #newer one.										  #
+  #########################################################################################
+  $orcapath/orca_2mkl ${targets[i]} -molden
 
   echo -e "Creating molden input as ${targets[i]}.molden.input.\n"
 
-  java -jar ~/Programs/janpa/molden2molden.jar -fromorca3bf -orca3signs -i ${targets[i]}.molden.input -o ${targets[i]}.molden
+  #########################################################################################
+  # In order to run this script you must to define janpa path into your bashrc or modify  #
+  #the line 94 where it reads '$janpapath' to the actual path to janpa in your system.    #
+  #########################################################################################
+
+  java -jar $janpapath/molden2molden.jar -fromorca3bf -orca3signs -i ${targets[i]}.molden.input -o ${targets[i]}.molden
 
   echo -e "Creating janpa file as ${targets[i]}.janpa.\n"
 
-  java -jar ~/Programs/janpa/janpa.jar -i ${targets[i]}.molden -ignorefock > ${targets[i]}.janpa
+  java -jar $janpapath/janpa.jar -i ${targets[i]}.molden -ignorefock > ${targets[i]}.janpa
 
 done
 
