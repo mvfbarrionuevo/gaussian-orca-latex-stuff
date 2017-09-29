@@ -1,0 +1,147 @@
+#!/bin/bash
+
+###########################################################################################
+#  Author: Manoel Barrionuevo - 27/09/2017
+#  Last update: 25/08/2017
+# 
+#   HPA is used to perform a Fukui analysis to identify how prone an atom is to undergo
+# a nucleophilic (f+), an electrophilic (f-) or a radical (f0) attack.
+#
+#   There are few ways to get this and it is strongly recommended to have a carreful look
+# at Kenichi Fukui's book named "Reactivity and Structure Concepts in Organic Chemistry:
+# Theory of Orientation and Stereoselection". There are, also, tons of articles you can
+# find out there and I encourage you to go and read all (seriously, there are lots of
+# wrong stuff being said today about this topic).
+#
+#   For our purposes, this software is going to extract and compute the fukui index
+# for a multi-step job from orca. That must always be set as a pipeline of single points
+# where it is firstly calculated the already optimized structure of your compound,
+# then a first perturbation by removing an electron, and a second one by adding an
+# electron.
+#
+#   HPA is an acronym to Hirshfeld Population Anaylsis, because this script performs a
+# condensed computation of fukui index by using Hirshfeld charges out of HPA from Orca.
+#
+#   Thus we have:
+#
+# 1) To calculate f+, electrophilicity, how prone is an atom to undergo a nucleophilic attack;
+# 2) To calculate f-, nucleophilicity, how prone is an atom to undergo a electrophilic attack;
+# 3) To calculate f0, suceptibility to undergo a radical attack;
+###########################################################################################
+
+###########################################################################################
+#                         	 GETTING STUFF TO WORK WITH	                          #
+###########################################################################################
+
+if [ -z $1 ]; then
+	echo -e "There is no given multjob. Please, provide only the file name without extension.\n"
+	exit 0;
+fi
+
+###########################################################################################
+#                          DETERMINING NATURAL, CATION AND ANION                          #
+###########################################################################################
+
+for ((i = 1; i<=3; i++)); do
+   job[$i-1]=$(grep "*" $1.out | grep "xyz" | grep -ioP '\ [+-]?[0-9]\ ' | awk -v a=$i -v b=1 'FNR==a {print $b}' | sed 's/\ //g')
+done
+
+min=$(grep "*" $1.out | grep "xyz" | grep -ioP '\ [+-]?[0-9]\ ' | sed 's/\ //g' | sort -n | head -1)
+max=$(grep "*" $1.out | grep "xyz" | grep -ioP '\ [+-]?[0-9]\ ' | sed 's/\ //g' | sort -n | tail -1)
+
+for ((i = 0; i<=2; i++)); do
+   if [ ${job[$i]} = $min ]; then
+        job_type[$i]="anion"
+   elif [ ${job[$i]} = $max ]; then
+        job_type[$i]="cation"
+   else
+        job_type[$i]="natural"
+   fi
+done
+
+###########################################################################################
+#                                 SPLITTING MULTJOB FILE                                  #
+###########################################################################################
+
+targets=($(grep -h "base" $1.out | grep -o '".*"' | sed 's/"//g'))
+
+for ((i = 0; i <= 2; i++)); do
+   if [ $i = 2 ]; then	
+     echo -e "Getting job $((i+1)) as ${targets[i]}.out.\n"
+     sed -n -e '/JOB\ NUMBER\ \ 3/,/TOTAL\ RUN\ \TIME/ p' $1.out > ${targets[i]}.out
+   else
+     echo -e "Getting job $((i+1)) as ${targets[i]}.out.\n"
+     sed -n -e "/JOB\ NUMBER\ \ $((i+1))/,/JOB\ NUMBER\ \ $((i+2))/ p" $1.out > ${targets[i]}.out
+   fi
+done
+
+###########################################################################################
+#                             GETTING HIRSHFELD CHARGE VALUES                             #
+###########################################################################################
+
+#firstly we are going to count, yeap, count atoms!! noa = number of atoms
+
+noa=$(sed -n '/CARTESIAN COORDINATES (ANGSTROEM)/,/^$/p' ${targets[1]}.out | sed -n '/-------/,/^$/p' | sed 1d | sed "$ d" | wc -l)
+
+#now we are going to generate a file containing the atoms and its charges
+
+for ((i = 0; i <= 2; i++)); do
+   grep -A$noa "  ATOM     CHARGE      SPIN   " ${targets[i]}.out | sed 1d > ${job_type[i]}.txt
+done
+
+###########################################################################################
+#                               CALCULATING FUKUI INDICES                                 #
+###########################################################################################
+
+rm -rf HPA_$1.csv
+
+echo -e "Calculating values. Please waite, it will take a few minutes.\n"
+echo -en "Hirshfeld Population Analysis (HPA) - Fukui Indices of $1\n" >> HPA_$1.csv
+echo -en "atomid;atom;atomid+atom;NPA_natural;NPA_cation;NPA_anion;fplus;fminus;fradi;(atomid,fplus);(atomid,fminus);(atomid,fradi) \n" >> HPA_$1.csv
+
+max_q_fplus=-10
+min_q_fplus=10
+max_q_fmins=-10
+min_q_fmins=10
+max_q_fradi=-10
+min_q_fradi=10
+
+for ((i=1; i<=$(cat ${job_type[1]}.txt | wc -l); i++)); do
+    atom=$(awk -v a=$i -v b=2 'FNR == a {print $b}' ${job_type[1]}.txt )
+    atomid=$(awk -v a=$i -v b=1 'FNR == a {print $b}' ${job_type[1]}.txt)
+    for ((j = 0; j<=2; j++)); do
+      if [ ${job_type[$j]} = "anion" ]; then
+        q_ani=$(awk -v a=$i -v b=3 'FNR == a {print $b}' ${job_type[j]}.txt)
+      elif [ ${job_type[$j]} = "cation" ]; then
+        q_cat=$(awk -v a=$i -v b=3 'FNR == a {print $b}' ${job_type[j]}.txt)
+      else
+        q_nat=$(awk -v a=$i -v b=3 'FNR == a {print $b}' ${job_type[j]}.txt)
+      fi
+    done
+    echo -e "Calculating fukui index for atom $atomid$atom.\n"
+    
+    q_fplus=$(python -c "print (-$q_ani-(-$q_nat))")
+    max_q_fplus=$(python -c "print(max($q_fplus,$max_q_fplus))")
+    min_q_fplus=$(python -c "print(min($q_fplus,$min_q_fplus))")    
+    
+    q_fmins=$(python -c "print (-$q_nat-(-$q_cat))")
+    max_q_fmins=$(python -c "print(max($q_fmins,$max_q_fmins))")
+    min_q_fmins=$(python -c "print(min($q_fmins,$min_q_fmins))")    
+    
+    q_fradi=$(python -c "print ((-$q_ani-(-$q_cat)))/2")
+    max_q_fradi=$(python -c "print(max($q_fradi,$max_q_fradi))")
+    min_q_fradi=$(python -c "print(min($q_fradi,$min_q_fradi))")    
+    
+    q_atmid=$(python -c "print $atomid-1")
+    echo -en "$q_atmid;$atom;$q_atmid$atom;$q_nat;$q_cat;$q_ani;$q_fplus;$q_fmins;$q_fradi;($q_atmid,$q_fplus);($q_atmid,$q_fmins);($q_atmid,$q_fradi) \n" >> HPA_$1.csv
+done
+
+    echo -en ";;;;;max;$max_q_fplus;$max_q_fmins;$max_q_fradi \n" >> HPA_$1.csv
+    echo -en ";;;;;min;$min_q_fplus;$min_q_fmins;$min_q_fradi \n" >> HPA_$1.csv
+
+for ((i = 0; i<=2; i++)); do
+    rm -rf ${job_type[i]}.txt
+done
+
+echo -e "A HPA_$1.csv file has been created.\n"
+echo -e "That's all folks. Have a nice HPA analysis.\n"
